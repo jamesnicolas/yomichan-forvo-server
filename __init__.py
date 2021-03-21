@@ -4,6 +4,8 @@ import requests
 import re
 import json
 import base64
+import threading
+
 from http import HTTPStatus
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
@@ -90,23 +92,40 @@ class Forvo():
             url = self._extract_url(i)
             audio_sources.append({"name":"Forvo Search","url":url})
         return audio_sources
+        
+    def unique(self, *audio_sources):
+        """
+        unique combines multiple audio_sources lists by URL. Useful since Forvo's 'search' page and 'word' page
+        have overlapping results
+        """
+        audio_sources_map = {}
+        for source in audio_sources:
+            audio_sources_map
 
 
 class SearchHandler(http.server.SimpleHTTPRequestHandler):
     forvo = Forvo('ja')
+
+    # By default, SimpleHTTPRequestHandler logs to stderr
+    # This would cause Anki to show an error, even on successful request, so override this function to do nothing.
+    def log_message(self, *args, **kwargs):
+        pass
 
     def do_GET(self):
         self.send_response(HTTPStatus.OK) 
         self.send_header("Content-type", "application/json")
         self.end_headers()
 
-        # Extract query param
-        expression = 'すごい'
+        # Extract 'expression' and 'reading' query parameters
         query_components = parse_qs(urlparse(self.path).query)
-        if 'expression' in query_components:
-            expression = query_components["expression"][0]
+        expression = query_components["expression"][0] if "expression" in query_components else ""
+        reading = query_components["reading"][0] if "reading" in query_components else ""
         
+        # Try looking for word sources for 'expression' first
         audio_sources = self.forvo.word(expression)
+
+        #
+        audio_sources += self.forvo.word(reading)
 
         resp = {
             "type": "audioSourceList",
@@ -118,5 +137,8 @@ class SearchHandler(http.server.SimpleHTTPRequestHandler):
 
         return
 
-httpd = socketserver.TCPServer(('', 8770), SearchHandler)
-httpd.serve_forever()
+httpd = http.server.ThreadingHTTPServer(('localhost', 8770), SearchHandler)
+server_thread = threading.Thread(target=httpd.serve_forever)
+# Exit the server thread when the main thread terminates
+server_thread.daemon = True
+server_thread.start()
