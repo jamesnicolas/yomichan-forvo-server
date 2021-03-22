@@ -92,23 +92,19 @@ class Forvo():
             url = self._extract_url(i)
             audio_sources.append({"name":"Forvo Search","url":url})
         return audio_sources
-        
-    def unique(self, *audio_sources):
-        """
-        unique combines multiple audio_sources lists by URL. Useful since Forvo's 'search' page and 'word' page
-        have overlapping results
-        """
-        audio_sources_map = {}
-        for source in audio_sources:
-            audio_sources_map
 
 
-class SearchHandler(http.server.SimpleHTTPRequestHandler):
+class ForvoHandler(http.server.SimpleHTTPRequestHandler):
     forvo = Forvo('ja')
 
     # By default, SimpleHTTPRequestHandler logs to stderr
-    # This would cause Anki to show an error, even on successful request, so override this function to do nothing.
-    def log_message(self, *args, **kwargs):
+    # This would cause Anki to show an error, even on successful requests
+    # log_error is still a useful function though, so replace it with the inherited log_message
+    # Make log_message do nothing
+    def log_error(self, *args, **kwargs):
+        super().log_message(*args, **kwargs)
+
+    def log_message(self, *args):
         pass
 
     def do_GET(self):
@@ -120,13 +116,25 @@ class SearchHandler(http.server.SimpleHTTPRequestHandler):
         query_components = parse_qs(urlparse(self.path).query)
         expression = query_components["expression"][0] if "expression" in query_components else ""
         reading = query_components["reading"][0] if "reading" in query_components else ""
+
+        audio_sources = []
         
         # Try looking for word sources for 'expression' first
         audio_sources = self.forvo.word(expression)
 
-        #
-        audio_sources += self.forvo.word(reading)
+        # Try looking for word sources for 'reading'
+        if len(audio_sources) == 0:
+            audio_sources += self.forvo.word(reading)
+        
+        # Finally use forvo search to look for similar words
+        if len(audio_sources) == 0:
+            audio_sources += self.forvo.search(expression)
 
+        if len(audio_sources) == 0:
+            audio_sources += self.forvo.search(reading)
+
+        # Build JSON that yomichan requires
+        # Ref: https://github.com/FooSoft/yomichan/blob/master/ext/data/schemas/custom-audio-list-schema.json
         resp = {
             "type": "audioSourceList",
             "audioSources": audio_sources
@@ -137,8 +145,8 @@ class SearchHandler(http.server.SimpleHTTPRequestHandler):
 
         return
 
-httpd = http.server.ThreadingHTTPServer(('localhost', 8770), SearchHandler)
+# Run the server in a non-blocking way
+httpd = http.server.ThreadingHTTPServer(('localhost', 8770), ForvoHandler)
 server_thread = threading.Thread(target=httpd.serve_forever)
-# Exit the server thread when the main thread terminates
 server_thread.daemon = True
 server_thread.start()
