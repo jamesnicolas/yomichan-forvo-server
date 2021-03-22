@@ -11,6 +11,10 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+
 class Forvo():
     """
     Forvo web-scraper utility class that matches YomiChan's expected output for a custom audio source
@@ -19,19 +23,50 @@ class Forvo():
     _AUDIO_HTTP_HOST = "https://audio00.forvo.com"
     def __init__(self, language):
         self.language = language
+        self._set_session()
+    
+    def _set_session(self):
+        """
+        Sets the session with basic backoff retries.
+        Put in a separate function so we can try resetting the session if something goes wrong
+        """
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            method_whitelist=["HEAD", "GET", "OPTIONS"]
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session = requests.Session()
-        # Using my personal User-Agent
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+        # Use my personal user agent to try to avoid scraping detection
         self.session.headers.update(
             {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Safari/537.36 Edg/89.0.774.45",
                 "Accept-Language": "en-US,en;q=0.5",
             }
         )
+
     def _get(self, path):
+        """
+        Makes a GET request assuming base url. Creates a new session if something goes wrong
+        """
         url = self._SERVER_HOST + path
-        return self.session.get(url).text
+        try:
+            return self.session.get(url, timeout=1).text
+
+        except Exception:
+            self._set_session()
+            return self.session.get(url, timeout=1).text
     
     def word(self, w):
+        """
+        Scrape forvo's word page for audio sources
+        """
+        w = w.strip()
+        if len(w) == 0:
+            return []
         path = f"/word/{w}/"
         html = self._get(path)
         soup = BeautifulSoup(html, features="html.parser")
@@ -78,6 +113,12 @@ class Forvo():
         return url
     
     def search(self, s):
+        """
+        Scrape Forvo's search page for audio sources. Note that the search page omits the username
+        """
+        s = s.strip()
+        if len(s) == 0:
+            return []
         path = f"/search/{s}/{self.language}/"
         html = self._get(path)
         soup = BeautifulSoup(html, features="html.parser")
@@ -116,6 +157,20 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
         query_components = parse_qs(urlparse(self.path).query)
         expression = query_components["expression"][0] if "expression" in query_components else ""
         reading = query_components["reading"][0] if "reading" in query_components else ""
+        debug = query_components["debug"][0] if "debug" in query_components else False
+
+        if debug:
+            debug_resp = {
+                "debug":True
+            }
+            debug_resp['reading'] = reading
+            debug_resp['expression'] = expression
+            debug_resp['word.expression'] = self.forvo.word(expression)
+            debug_resp['word.reading'] = self.forvo.word(reading)
+            debug_resp['search.expression'] = self.forvo.search(expression)
+            debug_resp['search.reading'] = self.forvo.search(reading)
+            self.wfile.write(bytes(json.dumps(debug_resp), "utf8"))
+            return
 
         audio_sources = []
         
@@ -139,14 +194,19 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
             "type": "audioSourceList",
             "audioSources": audio_sources
         }
-        print(json.dumps(resp))
         # Writing the JSON contents with UTF-8
         self.wfile.write(bytes(json.dumps(resp), "utf8"))
 
         return
 
-# Run the server in a non-blocking way
-httpd = http.server.ThreadingHTTPServer(('localhost', 8770), ForvoHandler)
-server_thread = threading.Thread(target=httpd.serve_forever)
-server_thread.daemon = True
-server_thread.start()
+if __name__ == "__main__":
+    # If we're not in Anki, run the server directly and blocking for easier debugging
+    print("Running in debug mode...")
+    httpd = socketserver.TCPServer(('localhost', 8770), ForvoHandler)
+    httpd.serve_forever()
+else:
+    # Else, run it in a separate thread so it doesn't block
+    httpd = http.server.ThreadingHTTPServer(('localhost', 8770), ForvoHandler)
+    server_thread = threading.Thread(target=httpd.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
