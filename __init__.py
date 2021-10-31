@@ -54,11 +54,11 @@ class Forvo():
         """
         url = self._SERVER_HOST + path
         try:
-            return self.session.get(url, timeout=1).text
+            return self.session.get(url, timeout=10).text
 
         except Exception:
             self._set_session()
-            return self.session.get(url, timeout=1).text
+            return self.session.get(url, timeout=10).text
     
     def word(self, w):
         """
