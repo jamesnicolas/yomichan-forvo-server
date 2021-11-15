@@ -153,9 +153,15 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-type", "application/json")
         self.end_headers()
 
-        # Extract 'expression' and 'reading' query parameters
+        # Extract 'term' and 'reading' query parameters
         query_components = parse_qs(urlparse(self.path).query)
+        term = query_components["term"][0] if "term" in query_components else ""
+
+        # Yomichan used to use "expression" but renamed to term. Still support "expression" for older versions
         expression = query_components["expression"][0] if "expression" in query_components else ""
+        if term == "":
+            term = expression
+
         reading = query_components["reading"][0] if "reading" in query_components else ""
         debug = query_components["debug"][0] if "debug" in query_components else False
 
@@ -164,18 +170,18 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
                 "debug":True
             }
             debug_resp['reading'] = reading
-            debug_resp['expression'] = expression
-            debug_resp['word.expression'] = self.forvo.word(expression)
+            debug_resp['term'] = term
+            debug_resp['word.term'] = self.forvo.word(term)
             debug_resp['word.reading'] = self.forvo.word(reading)
-            debug_resp['search.expression'] = self.forvo.search(expression)
+            debug_resp['search.term'] = self.forvo.search(term)
             debug_resp['search.reading'] = self.forvo.search(reading)
             self.wfile.write(bytes(json.dumps(debug_resp), "utf8"))
             return
 
         audio_sources = []
         
-        # Try looking for word sources for 'expression' first
-        audio_sources = self.forvo.word(expression)
+        # Try looking for word sources for 'term' first
+        audio_sources = self.forvo.word(term)
 
         # Try looking for word sources for 'reading'
         if len(audio_sources) == 0:
@@ -183,7 +189,7 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
         
         # Finally use forvo search to look for similar words
         if len(audio_sources) == 0:
-            audio_sources += self.forvo.search(expression)
+            audio_sources += self.forvo.search(term)
 
         if len(audio_sources) == 0:
             audio_sources += self.forvo.search(reading)
