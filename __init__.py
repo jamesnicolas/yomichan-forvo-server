@@ -94,7 +94,14 @@ class Forvo():
             # Capture the username of the user
             # Some users have deleted accounts which is why can't just parse it from the <a> tag
             username = re.search(r"Pronunciation by([^(]+)\(",i.get_text(strip=True)).group(1).strip()
-            audio_sources.append({"name":f"Forvo ({username})","url":url})
+            gender = re.search(r"\((Male|Female) from",i.get_text(strip=True)).group(1).strip()
+            genderSymbols = {
+                'Male': '♂',
+                'Female': '♀'
+            }
+            genderSymbol = genderSymbols[gender]
+            genderSymbol = genderSymbol if genderSymbol is not None else ''
+            audio_sources.append({"name":f"Forvo ({genderSymbol}{username})","url":url})
         return audio_sources
 
     @classmethod
