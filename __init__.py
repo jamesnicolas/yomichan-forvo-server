@@ -100,8 +100,7 @@ class Forvo():
                 'Male': '♂',
                 'Female': '♀'
             }
-            genderSymbol = genderSymbols[gender]
-            genderSymbol = genderSymbol if genderSymbol is not None else ''
+            genderSymbol = genderSymbols.get(gender, "")
             audio_sources.append({"name":f"Forvo ({genderSymbol}{username})","url":url})
         return audio_sources
 
