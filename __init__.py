@@ -94,8 +94,7 @@ class Forvo():
             # Capture the username of the user
             # Some users have deleted accounts which is why can't just parse it from the <a> tag
             username = re.search(r"Pronunciation by([^(]+)\(",i.get_text(strip=True)).group(1).strip()
-            gender = re.search(r"\((Male|Female)",i.get_text(strip=True))
-            gender = gender.group(1).strip() if gender is not None else ''
+            gender = re.search(r"\((Male|Female)",i.get_text(strip=True)).group(1).strip()
             genderSymbols = {
                 'Male': '♂',
                 'Female': '♀'
