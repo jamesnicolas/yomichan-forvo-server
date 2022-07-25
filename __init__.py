@@ -86,10 +86,10 @@ class Forvo():
         #   <article id="extra-word-info-76">...</article>
         # </ul>
         # We also filter out ads
-        results = soup.select('#language-container-ja>article>ul.show-all-pronunciations>li:not(.li-ad)')
+        results = soup.select('#language-container-ja>article>ul.pronunciations-list>li:not(.li-ad)')
         audio_sources = []
         for i in results:
-            url = self._extract_url(i.span)
+            url = self._extract_url(i.div)
 
             # Capture the username of the user
             # Some users have deleted accounts which is why can't just parse it from the <a> tag
@@ -98,8 +98,8 @@ class Forvo():
         return audio_sources
 
     @classmethod
-    def _extract_url(cls, span):
-        play = span['onclick']
+    def _extract_url(cls, element):
+        play = element['onclick']
         # We are interested in Forvo's javascript Play function which takes in some parameters to play the audio
         # Example: Play(786514,'OTA3Mjk2Ny83Ni85MDcyOTY3Xzc2XzExNDk0NzNfMS5tcDM=',...);return false;
         # Match anything that isn't commas, parentheses or quotes to capture the function arguments
@@ -127,7 +127,7 @@ class Forvo():
         # <ul class="word-play-list-icon-size-l">
         #   <li><span class="play" onclick"(some javascript to play the word audio)"></li>
         # </ul>
-        results = soup.select('ul.word-play-list-icon-size-l>li>span.play')
+        results = soup.select('ul.word-play-list-icon-size-l>li>div.play')
         audio_sources = []
         for i in results:
             url = self._extract_url(i)
