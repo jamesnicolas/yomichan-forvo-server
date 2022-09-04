@@ -5,30 +5,38 @@ import re
 import json
 import base64
 import threading
+import sys
 
 from http import HTTPStatus
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
+from dataclasses import dataclass, field
+from typing import List
 
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
 
 # Config default values
-_forvo_config = {
-    'port':8771,
-    'language':'jp',
-    'preferred_usernames': [],
-    'show_gender':True
-}
+@dataclass
+class ForvoConfig():
+    port: int = 8770
+    language: str = 'ja'
+    preferred_usernames: List[str] = field(default_factory=list)
+    show_gender: bool = True
+
+    def set(self, config):
+        self.__init__(**config)
+
+_forvo_config = ForvoConfig()
 
 class Forvo():
     """
     Forvo web-scraper utility class that matches YomiChan's expected output for a custom audio source
     """
     _SERVER_HOST = "https://forvo.com"
-    _AUDIO_HTTP_HOST = "https://audio00.forvo.com"
+    _AUDIO_HTTP_HOST = "https://audio12.forvo.com"
     def __init__(self, config=_forvo_config):
         self.config = config
         self._set_session()
@@ -51,7 +59,7 @@ class Forvo():
         # Use my personal user agent to try to avoid scraping detection
         self.session.headers.update(
             {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Safari/537.36 Edg/89.0.774.45",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27",
                 "Accept-Language": "en-US,en;q=0.5",
             }
         )
@@ -94,7 +102,7 @@ class Forvo():
         #   <article id="extra-word-info-76">...</article>
         # </ul>
         # We also filter out ads
-        results = soup.select(f"#language-container-{self.config['language']}>article>ul.pronunciations-list>li:not(.li-ad)")
+        results = soup.select(f"#language-container-{self.config.language}>article>ul.pronunciations-list>li:not(.li-ad)")
         audio_sources = []
         for i in results:
             url = self._extract_url(i.div)
@@ -127,7 +135,7 @@ class Forvo():
         s = s.strip()
         if len(s) == 0:
             return []
-        path = f"/search/{s}/{self.config['language']}/"
+        path = f"/search/{s}/{self.config.language}/"
         html = self._get(path)
         soup = BeautifulSoup(html, features="html.parser")
 
@@ -228,8 +236,8 @@ else:
     # Also import Anki-specific packages here
 
     from aqt import mw
-    _forvo_config = mw.addonManager.getConfig(__name__)
-    httpd = http.server.ThreadingHTTPServer(('localhost', _forvo_config['port']), ForvoHandler)
+    _forvo_config.set(mw.addonManager.getConfig(__name__))
+    httpd = http.server.ThreadingHTTPServer(('localhost', _forvo_config.port), ForvoHandler)
     server_thread = threading.Thread(target=httpd.serve_forever)
     server_thread.daemon = True
     server_thread.start()
