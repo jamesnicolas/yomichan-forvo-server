@@ -15,14 +15,22 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
 
+# Config default values
+_forvo_config = {
+    'port':8771,
+    'language':'jp',
+    'preferred_usernames': [],
+    'show_gender':True
+}
+
 class Forvo():
     """
     Forvo web-scraper utility class that matches YomiChan's expected output for a custom audio source
     """
     _SERVER_HOST = "https://forvo.com"
     _AUDIO_HTTP_HOST = "https://audio00.forvo.com"
-    def __init__(self, language):
-        self.language = language
+    def __init__(self, config=_forvo_config):
+        self.config = config
         self._set_session()
 
     def _set_session(self):
@@ -86,7 +94,7 @@ class Forvo():
         #   <article id="extra-word-info-76">...</article>
         # </ul>
         # We also filter out ads
-        results = soup.select('#language-container-ja>article>ul.pronunciations-list>li:not(.li-ad)')
+        results = soup.select(f"#language-container-{self.config['language']}>article>ul.pronunciations-list>li:not(.li-ad)")
         audio_sources = []
         for i in results:
             url = self._extract_url(i.div)
@@ -106,10 +114,10 @@ class Forvo():
         # Regex will match something like ["Play","786514","OTA3Mjk2Ny83Ni85MDcyOTY3Xzc2XzExNDk0NzNfMS5tcDM=", ...]
         play_args = re.findall(r"([^',\(\)]+)", play)
 
-        # It seems that forvo has two locations for mp3, /audios/mp3 and just /mp3. I don't know what the difference
-        # is so I'm just going to use the /mp3 version, which is the second argument in Play() base64 encoded
+        # forvo has two locations for mp3, /audios/mp3 and just /mp3. it seems /audios/mp3 is the normalized audio
+        # The filename is the second argument in Play() base64 encoded
         file = base64.b64decode(play_args[2]).decode("utf-8")
-        url = f"{cls._AUDIO_HTTP_HOST}/mp3/{file}"
+        url = f"{cls._AUDIO_HTTP_HOST}/audios/mp3/{file}"
         return url
 
     def search(self, s):
@@ -119,7 +127,7 @@ class Forvo():
         s = s.strip()
         if len(s) == 0:
             return []
-        path = f"/search/{s}/{self.language}/"
+        path = f"/search/{s}/{self.config['language']}/"
         html = self._get(path)
         soup = BeautifulSoup(html, features="html.parser")
 
@@ -136,7 +144,7 @@ class Forvo():
 
 
 class ForvoHandler(http.server.SimpleHTTPRequestHandler):
-    forvo = Forvo('ja')
+    forvo = Forvo(config=_forvo_config)
 
     # By default, SimpleHTTPRequestHandler logs to stderr
     # This would cause Anki to show an error, even on successful requests
@@ -217,7 +225,11 @@ if __name__ == "__main__":
     httpd.serve_forever()
 else:
     # Else, run it in a separate thread so it doesn't block
-    httpd = http.server.ThreadingHTTPServer(('localhost', 8770), ForvoHandler)
+    # Also import Anki-specific packages here
+
+    from aqt import mw
+    _forvo_config = mw.addonManager.getConfig(__name__)
+    httpd = http.server.ThreadingHTTPServer(('localhost', _forvo_config['port']), ForvoHandler)
     server_thread = threading.Thread(target=httpd.serve_forever)
     server_thread.daemon = True
     server_thread.start()
