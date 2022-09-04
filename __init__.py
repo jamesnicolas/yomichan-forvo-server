@@ -110,12 +110,15 @@ class Forvo():
             # Capture the username of the user
             # Some users have deleted accounts which is why can't just parse it from the <a> tag
             username = re.search(r"Pronunciation by([^(]+)\(",i.get_text(strip=True)).group(1).strip()
-            gender = re.search(r"\((Male|Female)",i.get_text(strip=True)).group(1).strip()
-            genderSymbols = {
-                'Male': '♂',
-                'Female': '♀'
-            }
-            genderSymbol = genderSymbols.get(gender, "")
+            if self.config.show_gender:
+                gender = re.search(r"\((Male|Female)",i.get_text(strip=True)).group(1).strip()
+                genderSymbols = {
+                    'Male': '♂',
+                    'Female': '♀'
+                }
+                genderSymbol = genderSymbols.get(gender, "")
+            else:
+                genderSymbol = ""
             audio_sources.append({"name":f"Forvo ({genderSymbol}{username})","url":url})
         return audio_sources
 
@@ -128,7 +131,6 @@ class Forvo():
         # Regex will match something like ["Play","786514","OTA3Mjk2Ny83Ni85MDcyOTY3Xzc2XzExNDk0NzNfMS5tcDM=", ...]
         play_args = re.findall(r"([^',\(\)]+)", play)
 
-        # forvo has two locations for mp3, /audios/mp3 and just /mp3. it seems /audios/mp3 is the normalized audio
         # The filename is the second argument in Play() base64 encoded
         file = base64.b64decode(play_args[2]).decode("utf-8")
         url = f"{cls._AUDIO_HTTP_HOST}/audios/mp3/{file}"
