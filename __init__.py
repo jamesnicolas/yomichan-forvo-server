@@ -126,13 +126,16 @@ class Forvo():
     def _extract_url(cls, element):
         play = element['onclick']
         # We are interested in Forvo's javascript Play function which takes in some parameters to play the audio
-        # Example: Play(786514,'OTA3Mjk2Ny83Ni85MDcyOTY3Xzc2XzExNDk0NzNfMS5tcDM=',...);return false;
+        # Example: Play(3060224,'OTQyN...','OTQyN..',false,'Yy9wL2NwXzk0MjYzOTZfNzZfMzM1NDkxNS5tcDM=','Yy9wL...','h')
         # Match anything that isn't commas, parentheses or quotes to capture the function arguments
-        # Regex will match something like ["Play","786514","OTA3Mjk2Ny83Ni85MDcyOTY3Xzc2XzExNDk0NzNfMS5tcDM=", ...]
+        # Regex will match something like ["Play", "3060224", ...]
         play_args = re.findall(r"([^',\(\)]+)", play)
 
-        # The filename is the second argument in Play() base64 encoded
-        file = base64.b64decode(play_args[2]).decode("utf-8")
+        # Forvo has two locations for mp3, /audios/mp3 and just /mp3
+        # /audios/mp3 is normalized and has the filename in the 5th argument of Play base64 encoded
+        # /mp3 is raw and has the filename in the 2nd argument of Play encoded
+        # So we pick the normalized one
+        file = base64.b64decode(play_args[5]).decode("utf-8")
         url = f"{cls._AUDIO_HTTP_HOST}/audios/mp3/{file}"
         return url
 
