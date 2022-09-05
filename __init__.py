@@ -5,7 +5,6 @@ import re
 import json
 import base64
 import threading
-import sys
 
 from http import HTTPStatus
 from bs4 import BeautifulSoup
