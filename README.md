@@ -22,7 +22,7 @@ Now when you scan a word in Yomichan, you should be able to right click the audi
 
 ## Configuration
 
-Yomichan Forvo Server supports a few configuration options, which you can edit by going to Add-Ons > Yomichan Forvo Server > Config.
+Yomichan Forvo Server supports a few configuration options, which you can edit by going to Tools > Add-Ons > Yomichan Forvo Server > Config. **Note configuration changes requires you to restard Anki to see effects**.
 
 Here is a sample configuration.
 
@@ -30,7 +30,9 @@ Here is a sample configuration.
 {
     "port":8770,
     "language":"ja",
-    "preferred_usernames": [],
+    "preferred_usernames": [
+        "skent"
+    ],
     "show_gender":true
 }
 ```
@@ -38,6 +40,11 @@ Here is a sample configuration.
 | Field               | Description |
 |---------------------|-------------|
 | port                | Port that YomiChan will call. Default is 8770 |
-| language            | Language code to use in Forvo. On the Forvo website, you can see what language code is in square brackets beside the language name on a pronunciation. Some examples are `ja` for Japanese or `zh` for Mandarin Chinese. |
-| preferred_usernames | A list of Forvo usernames. This will order the results on top based on this priority. |
-| show_gender         | Show the gender symbols (♂, ♀,) beside the username based on their gender. |
+| language            | Language code to use in Forvo. Some examples are `ja` for Japanese or `zh` for Mandarin Chinese. Default `ja`. On the Forvo website, you can see what language code is in square brackets beside the language name on a pronunciation. |
+| preferred_usernames | A list of Forvo usernames. This will order the results on top based on this priority. If empty, results will show based on the Forvo website order. |
+| show_gender         | Show the gender symbols (♂, ♀,) beside the username based on their gender. Default `true`. |
+
+## Links
+
+- GitHub: https://github.com/jamesnicolas/yomichan-forvo-server
+- Anki Add-on page: https://ankiweb.net/shared/info/580654285
