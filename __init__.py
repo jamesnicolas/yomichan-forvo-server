@@ -134,9 +134,13 @@ class Forvo():
         # Forvo has two locations for mp3, /audios/mp3 and just /mp3
         # /audios/mp3 is normalized and has the filename in the 5th argument of Play base64 encoded
         # /mp3 is raw and has the filename in the 2nd argument of Play encoded
-        # So we pick the normalized one
-        file = base64.b64decode(play_args[5]).decode("utf-8")
-        url = f"{cls._AUDIO_HTTP_HOST}/audios/mp3/{file}"
+        try:
+            file = base64.b64decode(play_args[5]).decode("utf-8")
+            url = f"{cls._AUDIO_HTTP_HOST}/audios/mp3/{file}"
+        # Some pronunciations don't have a normalized version so fallback to raw
+        except:
+            file = base64.b64decode(play_args[2]).decode("utf-8")
+            url = f"{cls._AUDIO_HTTP_HOST}/mp3/{file}"
         return url
 
     def search(self, s):
@@ -245,7 +249,6 @@ if __name__ == "__main__":
 else:
     # Else, run it in a separate thread so it doesn't block
     # Also import Anki-specific packages here
-
     from aqt import mw
     _forvo_config.set(mw.addonManager.getConfig(__name__))
     httpd = http.server.ThreadingHTTPServer(('localhost', _forvo_config.port), ForvoHandler)
