@@ -137,7 +137,7 @@ class Forvo():
                 'Male': '♂',
                 'Female': '♀'
             }
-            genderSymbol = genderSymbols.get(pronunciation['gender'], "")
+            genderSymbol = genderSymbols.get(pronunciation.get('gender', ""), "")
             audio_source['name'] = f"Forvo ({genderSymbol}{pronunciation['username']})"
             audio_sources.append(audio_source)
         return audio_sources

@@ -20,3 +20,24 @@ Install:
 
 Now when you scan a word in Yomichan, you should be able to right click the audio icon and the Forvo custom audio sources should appear.
 
+## Configuration
+
+Yomichan Forvo Server supports a few configuration options, which you can edit by going to Add-Ons > Yomichan Forvo Server > Config.
+
+Here is a sample configuration.
+
+```json
+{
+    "port":8770,
+    "language":"ja",
+    "preferred_usernames": [],
+    "show_gender":true
+}
+```
+
+| Field               | Description |
+|---------------------|-------------|
+| port                | Port that YomiChan will call. Default is 8770 |
+| language            | Language code to use in Forvo. On the Forvo website, you can see which the language code in square brackets beside the language name. Some examples are `ja` for Japanese or `zh` for Mandarin Chinese. |
+| preferred_usernames | A list of Forvo usernames. This will order the results on top based on this priority. |
+| show_gender         | Show the gender symbols (♂, ♀,) beside the username based on their gender. |
