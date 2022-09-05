@@ -38,6 +38,6 @@ Here is a sample configuration.
 | Field               | Description |
 |---------------------|-------------|
 | port                | Port that YomiChan will call. Default is 8770 |
-| language            | Language code to use in Forvo. On the Forvo website, you can see which the language code in square brackets beside the language name. Some examples are `ja` for Japanese or `zh` for Mandarin Chinese. |
+| language            | Language code to use in Forvo. On the Forvo website, you can see what language code is in square brackets beside the language name on a pronunciation. Some examples are `ja` for Japanese or `zh` for Mandarin Chinese. |
 | preferred_usernames | A list of Forvo usernames. This will order the results on top based on this priority. |
 | show_gender         | Show the gender symbols (♂, ♀,) beside the username based on their gender. |
