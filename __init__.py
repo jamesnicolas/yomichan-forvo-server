@@ -103,23 +103,44 @@ class Forvo():
         # </ul>
         # We also filter out ads
         results = soup.select(f"#language-container-{self.config.language}>article>ul.pronunciations-list>li:not(.li-ad)")
-        audio_sources = []
+        pronunciations = []
         for i in results:
             url = self._extract_url(i.div)
 
             # Capture the username of the user
             # Some users have deleted accounts which is why can't just parse it from the <a> tag
             username = re.search(r"Pronunciation by([^(]+)\(",i.get_text(strip=True)).group(1).strip()
+            pronunciation = {
+                'username': username,
+                'url': url
+            }
             if self.config.show_gender:
                 gender = re.search(r"\((Male|Female)",i.get_text(strip=True)).group(1).strip()
-                genderSymbols = {
-                    'Male': '♂',
-                    'Female': '♀'
-                }
-                genderSymbol = genderSymbols.get(gender, "")
-            else:
-                genderSymbol = ""
-            audio_sources.append({"name":f"Forvo ({genderSymbol}{username})","url":url})
+                pronunciation['gender'] = gender
+            pronunciations.append(pronunciation)
+        # Order the list based on preferred_usernames
+        if len(self.config.preferred_usernames):
+            keys = self.config.preferred_usernames
+            def get_index(pronunciation):
+                key = pronunciation['username']
+                if key in keys:
+                    return keys.index(key)
+                for i in range(len(pronunciations)):
+                    if key == pronunciations[i]['username']:
+                        return i + len(keys)
+            pronunciations = sorted(pronunciations, key=get_index)
+        
+        # Transform the list of pronunciations into Yomichan format
+        audio_sources = []
+        for pronunciation in pronunciations:
+            audio_source = {"url":pronunciation['url']}
+            genderSymbols = {
+                'Male': '♂',
+                'Female': '♀'
+            }
+            genderSymbol = genderSymbols.get(pronunciation['gender'], "")
+            audio_source['name'] = f"Forvo ({genderSymbol}{pronunciation['username']})"
+            audio_sources.append(audio_source)
         return audio_sources
 
     @classmethod
