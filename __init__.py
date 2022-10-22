@@ -108,14 +108,15 @@ class Forvo():
 
             # Capture the username of the user
             # Some users have deleted accounts which is why can't just parse it from the <a> tag
-            username = re.search(r"Pronunciation by([^(]+)\(",i.get_text(strip=True)).group(1).strip()
+            username = re.search(r"Pronunciation by([^(]+)\(", i.get_text(strip=True)).group(1).strip()
             pronunciation = {
                 'username': username,
                 'url': url
             }
             if self.config.show_gender:
-                gender = re.search(r"\((Male|Female)",i.get_text(strip=True)).group(1).strip()
-                pronunciation['gender'] = gender
+                m = re.search(r"\((Male|Female)", i.get_text(strip=True))
+                if m:
+                    pronunciation['gender'] = m.group(1).strip()
             pronunciations.append(pronunciation)
         # Order the list based on preferred_usernames
         if len(self.config.preferred_usernames):
@@ -128,18 +129,18 @@ class Forvo():
                     if key == pronunciations[i]['username']:
                         return i + len(keys)
             pronunciations = sorted(pronunciations, key=get_index)
-        
+
         # Transform the list of pronunciations into Yomichan format
         audio_sources = []
         for pronunciation in pronunciations:
-            audio_source = {"url":pronunciation['url']}
-            genderSymbols = {
-                'Male': '♂',
-                'Female': '♀'
-            }
-            genderSymbol = genderSymbols.get(pronunciation.get('gender', ""), "")
-            audio_source['name'] = f"Forvo ({genderSymbol}{pronunciation['username']})"
-            audio_sources.append(audio_source)
+            genderSymbol = {
+                "Male": '♂',
+                "Female": '♀',
+            }.get(pronunciation.get("gender"), "")
+            audio_sources.append({
+                "url": pronunciation['url'],
+                "name": f"Forvo ({genderSymbol}{pronunciation['username']})",
+            })
         return audio_sources
 
     @classmethod
