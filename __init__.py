@@ -5,6 +5,8 @@ import re
 import json
 import base64
 import threading
+import cloudscraper
+import logging
 
 from http import HTTPStatus
 from bs4 import BeautifulSoup
@@ -39,6 +41,7 @@ class Forvo():
     def __init__(self, config=_forvo_config):
         self.config = config
         self._set_session()
+        self.scraper = cloudscraper.create_scraper()
 
     def _set_session(self):
         """
@@ -68,12 +71,12 @@ class Forvo():
         Makes a GET request assuming base url. Creates a new session if something goes wrong
         """
         url = self._SERVER_HOST + path
-        try:
-            return self.session.get(url, timeout=10).text
+        #try:
+        return self.scraper.get(url).text
 
-        except Exception:
-            self._set_session()
-            return self.session.get(url, timeout=10).text
+        # except Exception:
+        #     self._set_session()
+        #     return self.session.get(url, timeout=10).text
 
     def word(self, w):
         """
@@ -84,6 +87,7 @@ class Forvo():
             return []
         path = f"/word/{w}/"
         html = self._get(path)
+        logging.debug(html)
         soup = BeautifulSoup(html, features="html.parser")
 
         # Forvo's word page returns multiple result sets grouped by langauge like:
@@ -102,6 +106,7 @@ class Forvo():
         # </ul>
         # We also filter out ads
         results = soup.select(f"#language-container-{self.config.language}>article>ul.pronunciations-list>li:not(.li-ad)")
+        logging.debug(results)
         pronunciations = []
         for i in results:
             url = self._extract_url(i.div)
@@ -173,6 +178,7 @@ class Forvo():
             return []
         path = f"/search/{s}/{self.config.language}/"
         html = self._get(path)
+        logging.debug(f"{html}\nRequest to {path}")
         soup = BeautifulSoup(html, features="html.parser")
 
         # Forvo's search page returns two result sets like:
@@ -223,7 +229,12 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
             debug_resp['word.reading'] = self.forvo.word(reading)
             debug_resp['search.term'] = self.forvo.search(term)
             debug_resp['search.reading'] = self.forvo.search(reading)
-            self.wfile.write(bytes(json.dumps(debug_resp), "utf8"))
+            payload = bytes(json.dumps(debug_resp), "utf8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-type", "application/json")
+            self.send_header("Content-length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
             return
 
         audio_sources = []
@@ -265,6 +276,7 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     # If we're not in Anki, run the server directly and blocking for easier debugging
     print("Running in debug mode...")
+    logging.getLogger().setLevel(logging.DEBUG)
     httpd = socketserver.TCPServer(('localhost', 8770), ForvoHandler)
     httpd.serve_forever()
 else:
