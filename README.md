@@ -37,6 +37,9 @@ Yomichan Forvo Server supports a few configuration options, which you can edit b
 
 ## Changelog
 
+### 2022-10-26
+- handle case when gender isn't available
+
 ### 2022-09-05
 - add support for preferred usernames
 - fixed bug where it was using the raw audio from forvo, now uses the normalized audio from forvo
@@ -49,10 +52,9 @@ Yomichan Forvo Server supports a few configuration options, which you can edit b
 ### 2022-01-30
 - add Content-length header
 
-### 2021-03-22
-- fixed bug with empty reading/expression inputs returning unrelated words
-- added basic retries/timeouts to deal with connection issues
-
 ### 2021-11-14
 - change timeout to 10 seconds
 
+### 2021-03-22
+- fixed bug with empty reading/expression inputs returning unrelated words
+- added basic retries/timeouts to deal with connection issues

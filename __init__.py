@@ -5,13 +5,41 @@ import re
 import json
 import base64
 import threading
+import logging
 
 from http import HTTPStatus
 from bs4 import BeautifulSoup
+
+if __name__ == "__main__":
+    from PyQt5.QtWidgets import QApplication
+    from PyQt5.QtCore import QUrl
+    from PyQt5.QtWebEngineWidgets import QWebEngineView
+else:
+    from aqt.qt.QtWidgets import QApplication
+    from aqt.qt.QtCore import QUrl
+    from aqt.qt.QtWebEngineWidgets import QWebEngineView
+
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
 from dataclasses import dataclass, field
 from typing import List
+
+class Client(QWebEngineView):
+
+    def __init__(self, url):
+        self.app = QApplication(sys.argv)
+        QWebEngineView.__init__(self)
+        self.loadFinished.connect(self.on_page_load)
+        self.mainFrame().load(QUrl(url))
+        self.app.exec_()
+        
+    def on_page_load(self):
+        sleep(6)
+        self.app.quit()
+        
+import sys
+import bs4 as bs
+import urllib.request
 
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
@@ -30,6 +58,8 @@ class ForvoConfig():
 
 _forvo_config = ForvoConfig()
 
+
+
 class Forvo():
     """
     Forvo web-scraper utility class that matches YomiChan's expected output for a custom audio source
@@ -38,6 +68,7 @@ class Forvo():
     _AUDIO_HTTP_HOST = "https://audio12.forvo.com"
     def __init__(self, config=_forvo_config):
         self.config = config
+        self.cookies = {}
         self._set_session()
 
     def _set_session(self):
@@ -51,6 +82,18 @@ class Forvo():
             status_forcelist=[429, 500, 502, 503, 504],
             method_whitelist=["HEAD", "GET", "OPTIONS"]
         )
+        self.cookies = {
+            "G_ENABLED_IDPS":"google",
+             "_hjid":"c5f2bacb-165b-4a59-9ab7-539f7fe83a7d",
+             "_hjSessionUser_2680900":"eyJpZCI6Ijk0Y2VhZjkxLWZkZjItNTk2Ni1hZjEzLWQyY2M3ZDJmMzViOSIsImNyZWF0ZWQiOjE2NTg3NjM3MjY3NTksImV4aXN0aW5nIjp0cnVlfQ==",
+             "__qca":"P0-2105353813-1658763727081",
+             "PHPSESSID":"eo482pd8v3aflv1dhe83abm624",
+             "_hjSession_2680900":"eyJpZCI6IjlhOWM4OWM3LWI1YzYtNDU2OC1hZDMwLTA0NTU1MTZhMzM5NiIsImNyZWF0ZWQiOjE2Njc2NjQ5MDg4NjUsImluU2FtcGxlIjpmYWxzZX0=",
+             "_hjAbsoluteSessionInProgress":"0",
+             "_gid":"GA1.2.224030815.1667664909",
+             "_ga":"GA1.2.1912219511.1602430666",
+             "_ga_BLXPLFYS3N":"GS1.1.1667664909.11.1.1667666357.60.0.0",
+        }
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session = requests.Session()
         self.session.mount("https://", adapter)
@@ -58,7 +101,7 @@ class Forvo():
         # Use my personal user agent to try to avoid scraping detection
         self.session.headers.update(
             {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36",
                 "Accept-Language": "en-US,en;q=0.5",
             }
         )
@@ -69,11 +112,14 @@ class Forvo():
         """
         url = self._SERVER_HOST + path
         try:
-            return self.session.get(url, timeout=10).text
+            client_response = Client(url)
+            sleep(6)
+            source = client_response.mainFrame().toHtml()
+            return source.text
 
         except Exception:
             self._set_session()
-            return self.session.get(url, timeout=10).text
+            return self.session.get(url, timeout=10, cookies=self.cookies).text
 
     def word(self, w):
         """
@@ -84,6 +130,7 @@ class Forvo():
             return []
         path = f"/word/{w}/"
         html = self._get(path)
+        logging.debug(html)
         soup = BeautifulSoup(html, features="html.parser")
 
         # Forvo's word page returns multiple result sets grouped by langauge like:
@@ -102,6 +149,7 @@ class Forvo():
         # </ul>
         # We also filter out ads
         results = soup.select(f"#language-container-{self.config.language}>article>ul.pronunciations-list>li:not(.li-ad)")
+        logging.debug(results)
         pronunciations = []
         for i in results:
             url = self._extract_url(i.div)
@@ -173,6 +221,7 @@ class Forvo():
             return []
         path = f"/search/{s}/{self.config.language}/"
         html = self._get(path)
+        logging.debug(f"{html}\nRequest to {path}")
         soup = BeautifulSoup(html, features="html.parser")
 
         # Forvo's search page returns two result sets like:
@@ -223,7 +272,12 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
             debug_resp['word.reading'] = self.forvo.word(reading)
             debug_resp['search.term'] = self.forvo.search(term)
             debug_resp['search.reading'] = self.forvo.search(reading)
-            self.wfile.write(bytes(json.dumps(debug_resp), "utf8"))
+            payload = bytes(json.dumps(debug_resp), "utf8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-type", "application/json")
+            self.send_header("Content-length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
             return
 
         audio_sources = []
@@ -265,12 +319,14 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     # If we're not in Anki, run the server directly and blocking for easier debugging
     print("Running in debug mode...")
+    logging.getLogger().setLevel(logging.DEBUG)
     httpd = socketserver.TCPServer(('localhost', 8770), ForvoHandler)
     httpd.serve_forever()
 else:
     # Else, run it in a separate thread so it doesn't block
     # Also import Anki-specific packages here
     from aqt import mw
+
     _forvo_config.set(mw.addonManager.getConfig(__name__))
     httpd = http.server.ThreadingHTTPServer(('localhost', _forvo_config.port), ForvoHandler)
     server_thread = threading.Thread(target=httpd.serve_forever)
