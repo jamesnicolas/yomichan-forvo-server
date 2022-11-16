@@ -1,7 +1,6 @@
 
 
 # Yomichan Forvo Server for Anki
-## NOTICE! Addon currently broken due to Cloudflare verification in Forvo. Working on a fix 
 ![image](https://user-images.githubusercontent.com/2841145/111932339-97690580-8a93-11eb-9f2a-4fa791dd5954.png)
 
 Simple server to take advantage of Yomichan's custom audio sources feature. Requires Anki Connect. It web scrapes Forvo's search and word page to get a list of words.
