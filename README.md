@@ -38,6 +38,9 @@ Yomichan Forvo Server supports a few configuration options, which you can edit b
 
 ## Changelog
 
+### 2023-07-28
+- fixed deprecated `method_whitelist` in urllib3 Retry and use `allowed_methods`
+
 ### 2022-09-05
 - add support for preferred usernames
 - fixed bug where it was using the raw audio from forvo, now uses the normalized audio from forvo
