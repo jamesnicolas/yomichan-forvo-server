@@ -213,6 +213,9 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
         reading = query_components["reading"][0] if "reading" in query_components else ""
         debug = query_components["debug"][0] if "debug" in query_components else False
 
+        # Allow overriding the language
+        self.forvo.config.language = query_components.get("language", [self.forvo.config.language])[0]
+           
         if debug:
             debug_resp = {
                 "debug":True
