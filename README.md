@@ -38,7 +38,7 @@ Yomichan Forvo Server supports a few configuration options, which you can edit b
 
 ## Changelog
 
-### 2023-07-28
+### 2023-08-30
 - support overriding the language in the URL
 
 ### 2023-07-28
