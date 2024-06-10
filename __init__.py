@@ -24,7 +24,7 @@ class ForvoConfig():
     language: str = 'ja'
     preferred_usernames: List[str] = field(default_factory=list)
     show_gender: bool = True
-    show_country: bool = True
+    show_country: bool = False
 
     def set(self, config):
         self.__init__(**config)

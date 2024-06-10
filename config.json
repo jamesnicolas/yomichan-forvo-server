@@ -3,5 +3,5 @@
     "language":"ja",
     "preferred_usernames": [],
     "show_gender":true,
-    "show_country":true
+    "show_country":false
 }
