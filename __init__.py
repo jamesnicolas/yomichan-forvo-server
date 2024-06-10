@@ -108,7 +108,9 @@ class Forvo():
 
             # Capture the username of the user
             # Some users have deleted accounts which is why can't just parse it from the <a> tag
-            username = re.search(r"Pronunciation by([^(]+)\(", i.get_text(strip=True)).group(1).strip()
+            username_match = re.search(r"Pronunciation by([^(]+)\(", i.get_text(strip=True))
+            username = username_match.group(1).strip() if username_match else 'Unknown'
+
             pronunciation = {
                 'username': username,
                 'url': url
