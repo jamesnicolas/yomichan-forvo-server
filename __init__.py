@@ -24,6 +24,7 @@ class ForvoConfig():
     language: str = 'ja'
     preferred_usernames: List[str] = field(default_factory=list)
     show_gender: bool = True
+    show_country: bool = True
 
     def set(self, config):
         self.__init__(**config)
@@ -119,6 +120,11 @@ class Forvo():
                 m = re.search(r"\((Male|Female)", i.get_text(strip=True))
                 if m:
                     pronunciation['gender'] = m.group(1).strip()
+            if self.config.show_country:
+                countryMatch = re.search(r"\((?:Male|Female) from ([^)]+)\)", i.get_text(strip=True))
+                if countryMatch:
+                    pronunciation['country'] = countryMatch.group(1).strip()
+
             pronunciations.append(pronunciation)
         # Order the list based on preferred_usernames
         if len(self.config.preferred_usernames):
@@ -139,9 +145,14 @@ class Forvo():
                 "Male": '♂',
                 "Female": '♀',
             }.get(pronunciation.get("gender"), "")
+            
+            name = f"Forvo ({genderSymbol}{pronunciation['username']})"
+            if(country := pronunciation.get("country")):
+                name = re.sub(r"\)$", f", {country})", name)
+
             audio_sources.append({
                 "url": pronunciation['url'],
-                "name": f"Forvo ({genderSymbol}{pronunciation['username']})",
+                "name": name
             })
         return audio_sources
 
