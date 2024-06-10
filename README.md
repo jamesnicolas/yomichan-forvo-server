@@ -37,6 +37,9 @@ Yomichan Forvo Server supports a few configuration options, which you can edit b
 - Anki Add-on page: https://ankiweb.net/shared/info/580654285
 
 ## Changelog
+### 2024-06-10
+- handle anonymous users
+- support showing country
 
 ### 2023-08-30
 - support overriding the language in the URL
