@@ -2,6 +2,7 @@
     "port":8770,
     "language":"ja",
     "preferred_usernames": [],
+    "preferred_countries": [],
     "show_gender":true,
     "show_country":false
 }
