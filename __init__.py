@@ -23,11 +23,15 @@ class ForvoConfig():
     port: int = 8770
     language: str = 'ja'
     preferred_usernames: List[str] = field(default_factory=list)
+    preferred_countries: List[str] = field(default_factory=list)
     show_gender: bool = True
     show_country: bool = False
 
     def set(self, config):
         self.__init__(**config)
+
+    def __post_init__(self):
+        self.preferred_countries = [c.lower() for c in self.preferred_countries]
 
 _forvo_config = ForvoConfig()
 
@@ -120,22 +124,31 @@ class Forvo():
                 m = re.search(r"\((Male|Female)", i.get_text(strip=True))
                 if m:
                     pronunciation['gender'] = m.group(1).strip()
-            if self.config.show_country:
+            if self.config.show_country or self.config.preferred_countries:
                 countryMatch = re.search(r"\((?:Male|Female) from ([^)]+)\)", i.get_text(strip=True))
                 if countryMatch:
                     pronunciation['country'] = countryMatch.group(1).strip()
 
             pronunciations.append(pronunciation)
-        # Order the list based on preferred_usernames
-        if len(self.config.preferred_usernames):
-            keys = self.config.preferred_usernames
+
+        # Order the list based on preferred_usernames and preferred_countries
+        # preferred usernames takes priority over preferred countries
+        if self.config.preferred_usernames or self.config.preferred_countries:
+            preferred_usernames = self.config.preferred_usernames
+            preferred_countries = self.config.preferred_countries
+
             def get_index(pronunciation):
-                key = pronunciation['username']
-                if key in keys:
-                    return keys.index(key)
-                for i in range(len(pronunciations)):
-                    if key == pronunciations[i]['username']:
-                        return i + len(keys)
+                pronunciation_username = pronunciation['username']
+                pronunciation_country = pronunciation.get('country', 'unknown').lower()
+                if pronunciation_username in preferred_usernames:
+                    return preferred_usernames.index(pronunciation_username)
+
+                if pronunciation_country in preferred_countries:
+                    return preferred_countries.index(pronunciation_country) + len(preferred_usernames)
+
+                # If the username isn't in the preferred lists, put it at the end
+                return len(preferred_usernames) + len(preferred_countries)
+
             pronunciations = sorted(pronunciations, key=get_index)
 
         # Transform the list of pronunciations into Yomichan format
