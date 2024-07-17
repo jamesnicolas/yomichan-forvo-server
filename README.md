@@ -40,7 +40,7 @@ Yomichan Forvo Server supports a few configuration options, which you can edit b
 
 ## Changelog
 ### 2024-07-15
-- add support for preferred usernames
+- add support for preferred countries
 
 ### 2024-06-10
 - handle anonymous users
